@@ -1,0 +1,13 @@
+# Unity Asset Store Downloader 依赖
+
+# 浏览器自动化
+playwright>=1.40.0
+
+# 异步支持（Python 3.7+ 已内置 asyncio，无需额外安装）
+# asyncio
+
+# 可选：更友好的进度显示
+# tqdm>=4.65.0
+
+# 可选：更好的控制台输出
+# rich>=13.0.0

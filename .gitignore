@@ -1,0 +1,52 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+
+# 虚拟环境
+venv/
+.env/
+.venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# 下载的资源（用户自行下载，不上传）
+Downloads/
+unitypackage/
+*.unitypackage
+
+# 日志和记录文件（包含用户数据）
+unity_cookies.json
+unity_failed_downloads.json
+unity_asset_import_log.json
+unity_storage_state.json
+unity_downloader_config.json
+
+# 临时文件
+*.tmp
+*.temp
+*.log
+
+# Unity 生成的文件（如果在 Unity 项目中）
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+[Bb]uilds/
+[Ll]ogs/
+[Uu]ser[Ss]ettings/
+
+# 备份文件
+备份/
+backup/
+old/
+*.bak
