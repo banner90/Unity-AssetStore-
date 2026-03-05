@@ -15,6 +15,8 @@ if os.name == 'nt':
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', write_through=True)
     sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', write_through=True)
 
+VERSION = "v0.1.1"
+
 
 def clear_screen():
     """清屏"""
@@ -34,7 +36,7 @@ def print_header():
     print(RED + "=" * 50 + RESET)
     print()
     print("=" * 50)
-    print("    Unity Asset Store 批量下载工具")
+    print(f"    Unity Asset Store 批量下载工具 {VERSION}")
     print("=" * 50)
     print()
 
