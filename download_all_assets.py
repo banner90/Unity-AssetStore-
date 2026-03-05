@@ -155,7 +155,8 @@ class Downloader:
         # 需要下载
         self.current_file = filename
         
-        download_task = asyncio.create_task(download.save_as(file_path))
+        # 使用 download.path() 获取原始下载文件路径，完成后直接移动为目标文件名，避免双份占用
+        download_task = asyncio.create_task(download.path())
         
         # 等待下载完成，带超时保护（5分钟）
         max_wait = 3000  # 5分钟 = 3000 * 0.1秒
@@ -179,7 +180,24 @@ class Downloader:
         
         # 检查任务结果
         try:
-            await download_task
+            temp_path = await download_task
+            
+            # 如果拿不到临时文件路径，退回到 save_as 复制方案
+            if not temp_path:
+                await download.save_as(file_path)
+            else:
+                try:
+                    # 若目标已存在（极少数竞态），以目标为准，清理原始文件
+                    if file_path.exists():
+                        try:
+                            Path(temp_path).unlink()
+                        except:
+                            pass
+                    else:
+                        shutil.move(temp_path, file_path)
+                except:
+                    # 失败时退回到 save_as
+                    await download.save_as(file_path)
             
             # 检查文件是否真的下载成功了
             if not file_path.exists() or file_path.stat().st_size == 0:

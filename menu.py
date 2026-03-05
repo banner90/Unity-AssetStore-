@@ -30,7 +30,7 @@ def print_header():
     print(RED + "=" * 50 + RESET)
     print(RED + "革命不是请客吃饭，不是做文章，不是绘画" + RESET)
     print(RED + "画像，而是要打倒一切牛鬼蛇神。" + RESET)
-    print(RED + "                                      (科学上网更快哦)" + RESET)
+    print(RED + "网络不畅通可以考虑切换三种下载方式（Edge/Chrome/内置 Chromium）" + RESET)
     print(RED + "=" * 50 + RESET)
     print()
     print("=" * 50)
