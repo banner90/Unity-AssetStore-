@@ -57,10 +57,10 @@ class Downloader:
         
     def _load_records(self):
         """加载记录"""
-        # 扫描已下载的文件
+        # 扫描已下载的文件（glob 只匹配 .unitypackage，比 iterdir 全量遍历更快）
         if self.config.DOWNLOAD_PATH.exists():
-            for f in self.config.DOWNLOAD_PATH.iterdir():
-                if f.is_file() and f.suffix == '.unitypackage':
+            for f in self.config.DOWNLOAD_PATH.glob("*.unitypackage"):
+                if f.is_file():
                     self.completed_files.add(f.name)
         
         # 加载失败记录
@@ -137,13 +137,27 @@ class Downloader:
         """处理下载"""
         filename = download.suggested_filename
         file_path = self.config.DOWNLOAD_PATH / filename
-        
-        # 文件已存在且完整
-        if file_path.exists() and file_path.stat().st_size > 0:
+
+        # 文件已存在且完整：优先查 completed_files 集合 O(1)，避免大量 exists+stat
+        skip_download = False
+        size_mb = 0.0
+        if filename in self.completed_files:
+            try:
+                size_bytes = file_path.stat().st_size
+                if size_bytes > 0:
+                    skip_download = True
+                    size_mb = size_bytes / (1024 * 1024)
+            except OSError:
+                self.completed_files.discard(filename)
+        elif file_path.exists() and file_path.stat().st_size > 0:
+            skip_download = True
+            size_mb = file_path.stat().st_size / (1024 * 1024)
+            self.completed_files.add(filename)
+
+        if skip_download:
             self.existing += 1
             self.completed += 1
             self.current_file = filename
-            size_mb = file_path.stat().st_size / (1024 * 1024)
             self._print('existing', filename, size_mb)
             self.failed_files.discard(filename)
             try:
@@ -151,7 +165,7 @@ class Downloader:
             except:
                 pass
             return
-        
+
         # 需要下载
         self.current_file = filename
         
