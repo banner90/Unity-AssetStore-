@@ -8,6 +8,7 @@ import asyncio
 import json
 import sys
 import shutil
+import time
 from pathlib import Path
 from dataclasses import dataclass
 from datetime import datetime
@@ -29,6 +30,12 @@ CLEAR = '\033[K'
 
 # 盲文转圈
 SPINNER = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏']
+
+# 浏览器启动参数：提高下载成功率与速度（单文件多连接、允许多文件同时下载）
+DOWNLOAD_BROWSER_ARGS = [
+    "--enable-features=ParallelDownloading",  # 单文件多连接并行下载
+    "--disable-features=DownloadBubble,DownloadBubbleV2",  # 避免下载气泡干扰自动化
+]
 
 @dataclass
 class Config:
@@ -241,18 +248,21 @@ class Downloader:
                 browser = await p.chromium.launch(
                     channel="msedge",
                     headless=self.config.HEADLESS,
-                    downloads_path=str(self.config.DOWNLOAD_PATH)
+                    downloads_path=str(self.config.DOWNLOAD_PATH),
+                    args=DOWNLOAD_BROWSER_ARGS,
                 )
             elif self.config.BROWSER == "chrome":
                 browser = await p.chromium.launch(
                     channel="chrome",
                     headless=self.config.HEADLESS,
-                    downloads_path=str(self.config.DOWNLOAD_PATH)
+                    downloads_path=str(self.config.DOWNLOAD_PATH),
+                    args=DOWNLOAD_BROWSER_ARGS,
                 )
             else:
                 browser = await p.chromium.launch(
                     headless=self.config.HEADLESS,
-                    downloads_path=str(self.config.DOWNLOAD_PATH)
+                    downloads_path=str(self.config.DOWNLOAD_PATH),
+                    args=DOWNLOAD_BROWSER_ARGS,
                 )
             
             if self.config.STORAGE_STATE_FILE.exists():
@@ -378,6 +388,7 @@ class Downloader:
                 return
             
             print(CYAN + "开始下载...\n" + RESET)
+            print(CYAN + "已启用多文件同时下载（无需逐个确认）" + RESET)
             
             page.on("download", lambda d: asyncio.create_task(self.handle_download(d)))
             await page.click(btn)
@@ -403,6 +414,10 @@ class Downloader:
                     if idle_mode:
                         print(CYAN + "\n检测到新的下载进展，恢复监听模式" + RESET)
                         idle_mode = False
+                        try:
+                            last_fs_count = sum(1 for _ in self.config.DOWNLOAD_PATH.glob("*.unitypackage"))
+                        except Exception:
+                            pass
                 else:
                     no_change += 1
                 
@@ -414,15 +429,33 @@ class Downloader:
                     idle_mode = True
                     print(YELLOW + "\n长时间无新进展，保持页面打开并后台等待（按 Ctrl+C 退出）" + RESET)
                 
-                # 空闲模式下定期检测目录变化，若发现新文件则唤醒监听
+                # 空闲模式下定期检测目录变化，若发现新文件或正在下载的临时文件则唤醒监听
                 if idle_mode:
                     try:
                         fs_count = sum(1 for f in self.config.DOWNLOAD_PATH.glob("*.unitypackage"))
-                    except:
+                        # 本工具仅用 Chrome/Edge/Chromium，下载中只会产生 *.crdownload；只认近期有修改的，避免残留导致无法进入空闲
+                        cutoff = time.time() - 300  # 5 分钟内修改的视为“进行中”
+                        def recent_partial(p: Path) -> bool:
+                            try:
+                                return p.stat().st_mtime >= cutoff
+                            except OSError:
+                                return False
+                        has_partial = False
+                        for f in self.config.DOWNLOAD_PATH.glob("*.crdownload"):
+                            if recent_partial(f):
+                                has_partial = True
+                                break
+                    except Exception:
                         fs_count = last_fs_count
+                        has_partial = False
                     if fs_count > last_fs_count:
                         print(CYAN + "\n检测到下载目录有新文件，恢复监听模式" + RESET)
                         idle_mode = False
+                        no_change = 0  # 避免下一轮立刻又因 no_change>60 进入空闲
+                    elif has_partial:
+                        print(CYAN + "\n检测到浏览器正在下载，恢复监听模式" + RESET)
+                        idle_mode = False
+                        no_change = 0  # 避免下一轮立刻又进入空闲导致反复刷日志
                     last_fs_count = fs_count
                 
                 try:

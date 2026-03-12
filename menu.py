@@ -15,7 +15,7 @@ if os.name == 'nt':
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', write_through=True)
     sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', write_through=True)
 
-VERSION = "v0.1.1"
+VERSION = "v0.2.0"
 
 
 def clear_screen():
